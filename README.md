@@ -11,7 +11,8 @@ using either rsync or rclone depending on the number of destinations.
 
 ## Try Scribe in Kind
 
-To try out Scribe in a `kind cluster`, follow the steps in [scribe/hack/run-in-kind.sh](https://github.com/backube/scribe/blob/master/hack/run-in-kind.sh).
+For a convenient script to start a `kind cluster`, try this: [github.com/backube/scribe/hack/setup-kind-cluster.sh](https://github.com/backube/scribe/blob/master/hack/setup-kind-cluster.sh).
+To try out Scribe in a `kind cluster`, follow the steps here: [github.com/backube/scribe/hack/run-in-kind.sh](https://github.com/backube/scribe/blob/master/hack/run-in-kind.sh).
 
 
 ## To install Scribe in a Kubernetes or OpenShift cluster:
@@ -19,7 +20,9 @@ To try out Scribe in a `kind cluster`, follow the steps in [scribe/hack/run-in-k
 To try out Scribe,  follow the steps in the [installation
 instructions](https://scribe-replication.readthedocs.io/en/latest/installation/index.html).
 
-## Tips for setting up storage in a cluster (already included in the run-in-kind script):
+## Tips for setting up storage in a cluster
+
+(already included in the run-in-kind script linked above)
 
 ### AWS tips to set up your storage to use Snapshot CopyMethod:
 
@@ -47,8 +50,12 @@ $ kubectl annotate volumesnapshotclass/gp2-csi snapshot.storage.kubernetes.io/is
 ### Before using scribectl, run through this example to become familar:
 Try out Scribe with [this rsync example](https://github.com/backube/scribe/blob/master/docs/usage/rsync/database_example.rst)!
 
-TODO: Replace example above with CLI commands
+## Now You can Try Scribe CLI!
 
+First, build the scribe binary (`scribe` will be placed in current directory):
+
+```console
+$ make scribe
 ```
-Now you're ready to try scribectl!
-```
+Try out `scribe` commands with [this rsync example](https://github.com/sallyom/scribectl/blob/main/examples/rsync/db-example.md)!
+
