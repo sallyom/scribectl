@@ -16,14 +16,14 @@ $ address=$(kubectl get replicationdestination/dest-scribe-destination  -n dest 
 ### Now, create source application with:
 
 ```console
-$ kubectl create ns src
-$ kubectl -n src apply -f ../scribe/examples/source-database/
+$ kubectl create ns source
+$ kubectl -n source apply -f ../scribe/examples/source-database/
 ```
 
 ### Create a database or other changes in the mysql database:
 
 ```console
-$ kubectl exec --stdin --tty -n source `kubectl get pods -n src | grep mysql | awk '{print $1}'` -- /bin/bash
+$ kubectl exec --stdin --tty -n source `kubectl get pods -n source | grep mysql | awk '{print $1}'` -- /bin/bash
 $ mysql -u root -p$MYSQL_ROOT_PASSWORD
 > create database my_new_database;
 > exit
@@ -33,8 +33,8 @@ $ exit
 ### Now, create replication source:
 
 ```console
-$ ./scribe new-source --address ${address} --source-namespace src --source-copy-method Snapshot --source-pvc mysql-pv-claim
-I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource src-scribe-source created in namespace src
+$ ./scribe new-source --address ${address} --source-namespace source --source-copy-method Snapshot --source-pvc mysql-pv-claim
+I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
 ```
 
 TODO: add this to scribe CLI
@@ -43,7 +43,7 @@ TODO: add this to scribe CLI
 ```console
 $ kubectl get secret -n dest scribe-rsync-dest-src-dest-scribe-destination -o yaml > /tmp/secret.yaml
 $ vi /tmp/secret.yaml
-# ^^^ change the namespace to "src"
+# ^^^ change the namespace to "source"
 # ^^^ remove the owner reference (.metadata.ownerReferences)
 $ kubectl apply -f /tmp/secret.yaml
 ```

@@ -18,8 +18,11 @@ import (
 )
 
 type ReplicationOptions struct {
+	scribeOptions           scribeOptions
 	Mode                    string
-	Client                  client.Client
+	KubeContext             string
+	DestinationClient       client.Client
+	SourceClient            client.Client
 	CopyMethod              string //v1alpha1.CopyMethodType
 	Capacity                string //*resource.Quantity
 	StorageClassName        string
@@ -65,29 +68,63 @@ func NewReplicationOptions(streams genericclioptions.IOStreams) *ReplicationOpti
 }
 
 // Complete takes the factory and infers options.
-func (o *ReplicationOptions) Complete(f kcmdutil.Factory, cmd *cobra.Command) error {
+func (o *ReplicationOptions) Complete(cmd *cobra.Command) error {
+	destKubeConfigFlags := genericclioptions.NewConfigFlags(true)
+	if len(o.scribeOptions.destKubeContext) > 0 {
+		destKubeConfigFlags.Context = &o.scribeOptions.destKubeContext
+	}
+	if len(o.scribeOptions.destKubeClusterName) > 0 {
+		destKubeConfigFlags.ClusterName = &o.scribeOptions.destKubeClusterName
+	}
+	sourceKubeConfigFlags := genericclioptions.NewConfigFlags(true)
+	if len(o.scribeOptions.sourceKubeContext) > 0 {
+		sourceKubeConfigFlags.Context = &o.scribeOptions.sourceKubeContext
+	}
+	if len(o.scribeOptions.sourceKubeClusterName) > 0 {
+		sourceKubeConfigFlags.ClusterName = &o.scribeOptions.sourceKubeClusterName
+	}
+	destf := kcmdutil.NewFactory(destKubeConfigFlags)
+	sourcef := kcmdutil.NewFactory(sourceKubeConfigFlags)
+
 	// get client and namespace
-	clientConfig, err := f.ToRESTConfig()
+	destClientConfig, err := destf.ToRESTConfig()
+	if err != nil {
+		return err
+	}
+	sourceClientConfig, err := sourcef.ToRESTConfig()
 	if err != nil {
 		return err
 	}
 	scheme := runtime.NewScheme()
 	scribev1alpha1.AddToScheme(scheme)
-	kclient, err := client.New(clientConfig, client.Options{Scheme: scheme})
+	destKclient, err := client.New(destClientConfig, client.Options{Scheme: scheme})
 	if err != nil {
 		return err
 	}
-	o.Client = kclient
+	o.DestinationClient = destKclient
+	sourceKclient, err := client.New(sourceClientConfig, client.Options{Scheme: scheme})
+	if err != nil {
+		return err
+	}
+	o.SourceClient = sourceKclient
 	if len(o.Namespace) == 0 {
-		o.Namespace, _, err = f.ToRawKubeConfigLoader().Namespace()
-		if err != nil {
-			return err
+		switch o.Mode {
+		case "destination":
+			o.Namespace, _, err = destf.ToRawKubeConfigLoader().Namespace()
+			if err != nil {
+				return err
+			}
+		case "source":
+			o.Namespace, _, err = sourcef.ToRawKubeConfigLoader().Namespace()
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if len(o.Name) == 0 {
 		o.Name = o.Namespace + "-scribe-" + o.Mode
 	}
-	klog.V(2).Infof("ReplicationDestination %s will be created in %s namespace", o.Name, o.Namespace)
+	klog.V(2).Infof("replication %s %s will be created in %s namespace", o.Mode, o.Name, o.Namespace)
 	return nil
 }
 
@@ -242,7 +279,7 @@ func (o *ReplicationOptions) CreateReplicationDestination() error {
 			External: externalSpec,
 		},
 	}
-	if err := o.Client.Create(context.TODO(), rd); err != nil {
+	if err := o.DestinationClient.Create(context.TODO(), rd); err != nil {
 		return err
 	}
 	klog.V(0).Infof("ReplicationDestination %s created in namespace %s", o.Name, o.Namespace)
@@ -251,6 +288,8 @@ func (o *ReplicationOptions) CreateReplicationDestination() error {
 
 // CreateReplicationSource creates a ReplicationSource resource
 func (o *ReplicationOptions) CreateReplicationSource() error {
+	klog.Infof("O.DESTCLIENT: %v", o.DestinationClient)
+	klog.Infof("O.SOURCECLIENT: %v", o.SourceClient)
 	c, err := o.getCommonOptions()
 	if err != nil {
 		return err
@@ -299,7 +338,7 @@ func (o *ReplicationOptions) CreateReplicationSource() error {
 			External:  externalSpec,
 		},
 	}
-	if err := o.Client.Create(context.TODO(), rs); err != nil {
+	if err := o.SourceClient.Create(context.TODO(), rs); err != nil {
 		return err
 	}
 	klog.V(0).Infof("ReplicationSource %s created in namespace %s", o.Name, o.Namespace)
