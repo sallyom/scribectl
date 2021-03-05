@@ -51,7 +51,6 @@ func NewCmdScribeNewSource(streams genericclioptions.IOStreams) *cobra.Command {
 	flags.StringVar(&o.AccessMode, "source-access-mode", o.AccessMode, "provided to override the accessModes of the point-in-Time image. One of 'ReadWriteOnce|ReadOnlyMany|ReadWriteMany")
 	flags.StringVar(&o.VolumeSnapshotClassName, "source-volume-snapshot-class", o.VolumeSnapshotClassName, "name of the VolumeSnapshotClass to be used for the source volume, only if the copyMethod is 'Snapshot'. If not set, the default VSC will be used.")
 	flags.StringVar(&o.PVC, "source-pvc", o.PVC, "name of an existing PersistentVolumeClaim (PVC) to replicate.")
-	flags.StringVar(&o.Namespace, "source-namespace", o.Namespace, "the transfer source namespace. This namespace must exist.")
 	// TODO: Default to every 3min for source?
 	flags.StringVar(&o.Schedule, "source-cron-spec", "*/3 * * * *", "cronspec to be used to schedule capturing the state of the source volume. If not set the source volume will be captured every 3 minutes.")
 	// TODO: should this be exposed?
