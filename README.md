@@ -1,8 +1,15 @@
 
-# Coming Soon: scribectl
+# scribectl
 command line interface for backube/scribe
 
-***This tool is currently being developed, only `new-destination` & `new-source` exists now, check back in coming weeks***
+Currently has these commands:
+
+```
+$ scribe new-source
+$ scribe new-destination
+$ scribe sync-ssh-secret
+```
+
 
 # Scribe
 
@@ -57,5 +64,8 @@ First, build the scribe binary (`scribe` will be placed in current directory):
 ```console
 $ make scribe
 ```
+
 Try out `scribe` commands with [this rsync example](https://github.com/sallyom/scribectl/blob/main/examples/rsync/db-example.md)!
+
+Try out `scribe` command across clusters with [cross-clusters rsync example](https://github.com/sallyom/scribectl/blob/main/examples/rsync/multi-context-sync.md)
 
