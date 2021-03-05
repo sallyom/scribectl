@@ -51,8 +51,6 @@ func NewCmdScribeNewDestination(streams genericclioptions.IOStreams) *cobra.Comm
 	flags.StringVar(&o.AccessMode, "dest-access-mode", o.AccessMode, "the access modes for the destination volume. Must be provided if --dest-pvc is not provided; One of 'ReadWriteOnce|ReadOnlyMany|ReadWriteMany")
 	flags.StringVar(&o.VolumeSnapshotClassName, "dest-volume-snapshot-class", o.VolumeSnapshotClassName, "name of the VolumeSnapshotClass to be used for the destination volume, only if the copyMethod is 'Snapshot'. If not set, the default VSC will be used.")
 	flags.StringVar(&o.PVC, "dest-pvc", o.PVC, "name of an existing PVC to use as the transfer destination volume instead of automatically provisioning one.")
-	flags.StringVar(&o.Namespace, "dest-namespace", o.Namespace, "the transfer destination namespace. This namespace must exist. If not set, the ReplicationDestination will be created in the current namespace.")
-	// TODO: Default?
 	flags.StringVar(&o.Schedule, "dest-cron-spec", o.Schedule, "cronspec to be used to schedule replication to occur at regular, time-based intervals. If not set replication will be continuous.")
 	// TODO: should this be exposed?
 	flags.StringVar(&o.SSHKeys, "dest-ssh-keys", o.SSHKeys, "name of a secret in the destination namespace to be used for authentication. If not set, SSH keys will be generated and a secret will be created with the appropriate keys.")

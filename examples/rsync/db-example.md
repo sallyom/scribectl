@@ -37,15 +37,13 @@ $ ./scribe new-source --address ${address} --source-namespace source --source-co
 I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
 ```
 
-TODO: add this to scribe CLI
-### Obtain an SSH secret from the destination namespace 
+### Sync an SSH secret from the destination namespace to the source namespace
+
+This assumes the default secret name that is created by the scribe controller. You can also pass `--ssh-keys-secret`
+that is a valid ssh-key-secret in the DestinationReplication namespace and cluster.
 
 ```console
-$ kubectl get secret -n dest scribe-rsync-dest-src-dest-scribe-destination -o yaml > /tmp/secret.yaml
-$ vi /tmp/secret.yaml
-# ^^^ change the namespace to "source"
-# ^^^ remove the owner reference (.metadata.ownerReferences)
-$ kubectl apply -f /tmp/secret.yaml
+scribe sync-ssh-secret --dest-namespace dest --source-namespace source
 ```
 
 TODO: add this to scribe CLI

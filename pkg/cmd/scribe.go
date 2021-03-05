@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"io"
 
+	scribev1alpha1 "github.com/backube/scribe/api/v1alpha1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	kcmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/templates"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -29,6 +33,10 @@ type scribeOptions struct {
 	sourceKubeContext     string
 	destKubeClusterName   string
 	sourceKubeClusterName string
+	destNamespace         string
+	sourceNamespace       string
+	DestinationClient     client.Client
+	SourceClient          client.Client
 
 	genericclioptions.IOStreams
 }
@@ -38,6 +46,8 @@ func (o *scribeOptions) Bind(flags *pflag.FlagSet) {
 	flags.StringVar(&o.sourceKubeContext, "source-kube-context", o.sourceKubeContext, "the name of the kubeconfig context to use for the destination cluster. Defaults to current-context.")
 	flags.StringVar(&o.destKubeClusterName, "dest-kube-clustername", o.destKubeClusterName, "the name of the kubeconfig cluster to use for the destination cluster. Defaults to current-cluster.")
 	flags.StringVar(&o.sourceKubeClusterName, "source-kube-clustername", o.sourceKubeClusterName, "the name of the kubeconfig cluster to use for the destination cluster. Defaults to current cluster.")
+	flags.StringVar(&o.destNamespace, "dest-namespace", o.destNamespace, "the transfer destination namespace and/or location of a ReplicationDestination. This namespace must exist. If not set, use the current namespace.")
+	flags.StringVar(&o.sourceNamespace, "source-namespace", o.sourceNamespace, "the transfer source namespace and/or location of a ReplicationSource. This namespace must exist. If not set, use the current namespace.")
 }
 
 // NewCmdScribe implements the scribe command
@@ -59,6 +69,62 @@ func NewCmdScribe(in io.Reader, out, errout io.Writer) *cobra.Command {
 	// For switching contexts: https://github.com/kubernetes/client-go/issues/192#issuecomment-362775792
 	cmds.AddCommand(NewCmdScribeNewDestination(streams))
 	cmds.AddCommand(NewCmdScribeNewSource(streams))
+	cmds.AddCommand(NewCmdScribeSyncSSHSecret(streams))
 
 	return cmds
+}
+
+func (o *scribeOptions) Complete() error {
+	destKubeConfigFlags := genericclioptions.NewConfigFlags(true)
+	if len(o.destKubeContext) > 0 {
+		destKubeConfigFlags.Context = &o.destKubeContext
+	}
+	if len(o.destKubeClusterName) > 0 {
+		destKubeConfigFlags.ClusterName = &o.destKubeClusterName
+	}
+	sourceKubeConfigFlags := genericclioptions.NewConfigFlags(true)
+	if len(o.sourceKubeContext) > 0 {
+		sourceKubeConfigFlags.Context = &o.sourceKubeContext
+	}
+	if len(o.sourceKubeClusterName) > 0 {
+		sourceKubeConfigFlags.ClusterName = &o.sourceKubeClusterName
+	}
+	destf := kcmdutil.NewFactory(destKubeConfigFlags)
+	sourcef := kcmdutil.NewFactory(sourceKubeConfigFlags)
+
+	// get client and namespace
+	destClientConfig, err := destf.ToRESTConfig()
+	if err != nil {
+		return err
+	}
+	sourceClientConfig, err := sourcef.ToRESTConfig()
+	if err != nil {
+		return err
+	}
+	scheme := runtime.NewScheme()
+	scribev1alpha1.AddToScheme(scheme)
+	corev1.AddToScheme(scheme)
+	destKClient, err := client.New(destClientConfig, client.Options{Scheme: scheme})
+	if err != nil {
+		return err
+	}
+	o.DestinationClient = destKClient
+	sourceKClient, err := client.New(sourceClientConfig, client.Options{Scheme: scheme})
+	if err != nil {
+		return err
+	}
+	o.SourceClient = sourceKClient
+	if len(o.destNamespace) == 0 {
+		o.destNamespace, _, err = destf.ToRawKubeConfigLoader().Namespace()
+		if err != nil {
+			return err
+		}
+	}
+	if len(o.sourceNamespace) == 0 {
+		o.sourceNamespace, _, err = sourcef.ToRawKubeConfigLoader().Namespace()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
