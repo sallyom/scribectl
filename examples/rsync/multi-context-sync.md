@@ -46,7 +46,7 @@ $ exit
 
 ### Create a replication destination:
 
-_If `kubectl get-contexts` shows current context is `testuser` then you can omit the `--dest-kube-context|clustername` flags_
+_If `kubectl config get-contexts` shows current context is `testuser` then you can omit the `--dest-kube-context|clustername` flags_
 
 ```bash
 $ kubectl --context testuser create ns dest
@@ -65,7 +65,7 @@ $ echo ${address} //to be sure it's not empty, may take a minute to populate
 ```
 ### Now, create replication source:
 
-_If `kubectl get-contexts` shows current context is `admin` then can omit the `source-kube-context|clustername` flags_
+_If `kubectl config get-contexts` shows current context is `admin` then can omit the `source-kube-context|clustername` flags_
 
 ```bash
 $ scribe new-source \
