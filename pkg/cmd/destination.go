@@ -57,7 +57,7 @@ func NewCmdScribeNewDestination(streams genericclioptions.IOStreams) *cobra.Comm
 	// Defaults to "root" after creation
 	flags.StringVar(&o.SSHUser, "dest-ssh-user", o.SSHUser, "username for outgoing SSH connections (default 'root')")
 	// Defaults to ClusterIP after creation
-	flags.StringVar(&o.ServiceType, "dest-service-type", o.ServiceType, "Service type to be created for incoming SSH connections. (default 'ClusterIP')")
+	flags.StringVar(&o.ServiceType, "dest-service-type", o.ServiceType, "one of ClusterIP|LoadBalancer. Service type to be created for incoming SSH connections. (default 'ClusterIP')")
 	// TODO: Defaulted in CLI, should it be??
 	flags.StringVar(&o.Name, "dest-name", o.Name, "name of the ReplicationDestination resource. (default '<current-namespace>-scribe-destination')")
 	// defaults to 22 after creation

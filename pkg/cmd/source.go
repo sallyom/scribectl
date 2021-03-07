@@ -58,7 +58,7 @@ func NewCmdScribeNewSource(streams genericclioptions.IOStreams) *cobra.Command {
 	// Defaults to "root" after creation
 	flags.StringVar(&o.SSHUser, "source-ssh-user", o.SSHUser, "username for outgoing SSH connections (default 'root')")
 	// Defaults to ClusterIP after creation
-	flags.StringVar(&o.ServiceType, "source-service-type", o.ServiceType, "the Service type that will be created for incoming SSH connections. (default 'ClusterIP')")
+	flags.StringVar(&o.ServiceType, "source-service-type", o.ServiceType, "one of ClusterIP|LoadBalancer. Service type that will be created for incoming SSH connections. (default 'ClusterIP')")
 	// TODO: Defaulted in CLI, should it be??
 	flags.StringVar(&o.Name, "source-name", o.Name, "name of the ReplicationSource resource (default '<source-ns>-scribe-source')")
 	// defaults to 22 after creation
