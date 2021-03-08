@@ -65,21 +65,6 @@ Save the rsync address from the destination to pass to the new-source:
 $ address=$(kubectl --context destuser get replicationdestination/dest-scribe-destination  -n dest --template={{.status.rsync.address}})
 $ echo ${address} //to be sure it's not empty, may take a minute to populate
 ```
-### Now, create replication source:
-
-_If `kubectl config current-context` shows current context is `sourceuser` then can omit the `source-kube-context|clustername` flags_
-
-```bash
-$ scribe new-source \
-     --address ${address} \
-     --source-namespace source \
-     --source-service-type LoadBalancer \
-     --source-copy-method Snapshot \
-     --source-pvc mysql-pv-claim \
-     --source-kube-context sourceuser \
-     --source-kube-clustername api-source-com:6443
-I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
-```
 
 ### Sync an SSH secret from the destination namespace to the source namespace
 
@@ -96,8 +81,24 @@ scribe sync-ssh-secret \
      --source-kube-clustername api-source-com:6443 --source-kube-context sourceuser
 ```
 
+### Create replication source:
+
+_If `kubectl config current-context` shows current context is `sourceuser` then can omit the `source-kube-context|clustername` flags_
+
+```bash
+$ scribe new-source \
+     --address ${address} \
+     --ssh-keys-secret scribe-rsync-dest-src-<name-of-replicationdestination> \ 
+     --source-namespace source \
+     --source-service-type LoadBalancer \
+     --source-copy-method Snapshot \
+     --source-pvc mysql-pv-claim \
+     --source-kube-context sourceuser \
+     --source-kube-clustername api-source-com:6443
+I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
+```
 TODO: add this to scribe CLI
-### Finally, create a database to sync in the destination ns
+### Finally, create a database to sync in the destination namespace
 
 Find the latest image from the ReplicationDestination, then
 use this image to create the PVC
@@ -106,4 +107,13 @@ use this image to create the PVC
 $ kubectl --context destuser get replicationdestination dest-scribe-destination -n dest --template={{.status.latestImage.name}}
 $ sed -i 's/snapshotToReplace/scribe-dest-database-destination-20201203174504/g' ../scribe/examples/destination-database/mysql-pvc.yaml
 $ kubectl --context destuser apply -n dest -f ../scribe/examples/destination-database/
+```
+
+Verify the synced database:
+```bash
+$ kubectl exec --stdin --tty -n dest `kubectl get pods -n dest | grep mysql | awk '{print $1}'` -- /bin/bash
+# mysql -u root -p$MYSQL_ROOT_PASSWORD
+> show databases;
+> exit
+$ exit
 ```

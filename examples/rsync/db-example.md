@@ -38,12 +38,6 @@ $ ./scribe new-destination --dest-namespace dest --dest-access-mode ReadWriteOnc
 I0302 09:28:35.028745 4174293 options.go:248] ReplicationDestination dest-scribe-destination created in namespace dest
 $ address=$(kubectl get replicationdestination/dest-scribe-destination  -n dest --template={{.status.rsync.address}})
 ```
-### Create a replication source:
-
-```bash
-$ ./scribe new-source --address ${address} --source-namespace source --source-copy-method Snapshot --source-pvc mysql-pv-claim
-I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
-```
 
 ### Sync an SSH secret from the destination namespace to the source namespace
 
@@ -51,9 +45,17 @@ This assumes the default secret name that is created by the scribe controller. Y
 that is a valid ssh-key-secret in the DestinationReplication namespace and cluster.
 
 ```bash
-scribe sync-ssh-secret --dest-namespace dest --source-namespace source
+scribe sync-ssh-secret --dest-namespace dest --source-namespace source 
 ```
 
+### Create a replication source:
+
+```bash
+$ ./scribe new-source --address ${address} --source-namespace source \
+    --source-copy-method Snapshot --source-pvc mysql-pv-claim \
+    --ssh-keys-secret scribe-rsync-dest-src-<name-of-replicationdestination>
+I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
+```
 TODO: add this to scribe CLI
 ### Finally, create a database to sync in the destination ns
 
@@ -64,4 +66,13 @@ use this image to create the PVC
 $ kubectl get replicationdestination dest-scribe-destination -n dest --template={{.status.latestImage.name}}
 $ sed -i 's/snapshotToReplace/scribe-dest-database-destination-20201203174504/g' ../scribe/examples/destination-database/mysql-pvc.yaml
 $ kubectl apply -n dest -f ../scribe/examples/destination-database/
+```
+
+Verify the synced database:
+```bash
+$ kubectl exec --stdin --tty -n dest `kubectl get pods -n dest | grep mysql | awk '{print $1}'` -- /bin/bash
+# mysql -u root -p$MYSQL_ROOT_PASSWORD
+> show databases;
+> exit
+$ exit
 ```
