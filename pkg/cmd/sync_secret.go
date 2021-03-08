@@ -6,6 +6,7 @@ import (
 
 	scribev1alpha1 "github.com/backube/scribe/api/v1alpha1"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,16 +52,19 @@ func NewCmdScribeSyncSSHSecret(streams genericclioptions.IOStreams) *cobra.Comma
 		Long:    fmt.Sprintf(scribeSyncSSHSecretLong),
 		Example: fmt.Sprintf(scribeSyncSSHSecretExample),
 		Run: func(cmd *cobra.Command, args []string) {
-			kcmdutil.CheckErr(o.Complete(cmd))
+			kcmdutil.CheckErr(o.Complete())
 			//TODO: kcmdutil.CheckErr(o.Validate())
 			kcmdutil.CheckErr(o.SyncSSHSecret())
 		},
 	}
 	flags := cmd.Flags()
+	o.Bind(flags)
 	o.scribeOptions.Bind(flags)
-	flags.StringVar(&o.SSHKeysSecret, "ssh-keys-secret", o.SSHKeysSecret, "name of an existing valid SSHKeys secret to be used for authentication. If not set, the default SSHKey secret-name will be used from the ReplicationDestination location (default '<scribe-rsync->dest-src-<name-of-replication-destination>)'.")
 
 	return cmd
+}
+func (o *sshKeysSecretOptions) Bind(flags *pflag.FlagSet) {
+	flags.StringVar(&o.SSHKeysSecret, "ssh-keys-secret", o.SSHKeysSecret, "name of an existing valid SSHKeys secret to be used for authentication. If not set, the default SSHKey secret-name will be used from the ReplicationDestination location (default '<scribe-rsync->dest-src-<name-of-replication-destination>)'.")
 }
 
 func NewSSHKeysSecretOptions(streams genericclioptions.IOStreams) *sshKeysSecretOptions {
@@ -70,7 +74,7 @@ func NewSSHKeysSecretOptions(streams genericclioptions.IOStreams) *sshKeysSecret
 }
 
 // Complete takes the cmd and infers options.
-func (o *sshKeysSecretOptions) Complete(cmd *cobra.Command) error {
+func (o *sshKeysSecretOptions) Complete() error {
 	ctx := context.Background()
 	err := o.scribeOptions.Complete()
 	if err != nil {

@@ -43,6 +43,7 @@ func NewCmdScribeNewSource(streams genericclioptions.IOStreams) *cobra.Command {
 	}
 	flags := cmd.Flags()
 	o.scribeOptions.Bind(flags)
+	o.sshKeysSecretOptions.Bind(flags)
 	flags.StringVar(&o.Mode, "mode", "source", "to distinguish destination options from source options")
 	flags.StringVar(&o.CopyMethod, "source-copy-method", o.CopyMethod, "the method of creating a point-in-time image of the source volume; one of 'None|Clone|Snapshot'")
 	flags.StringVar(&o.Address, "address", o.Address, "the remote address to connect to for replication.")
@@ -53,8 +54,6 @@ func NewCmdScribeNewSource(streams genericclioptions.IOStreams) *cobra.Command {
 	flags.StringVar(&o.PVC, "source-pvc", o.PVC, "name of an existing PersistentVolumeClaim (PVC) to replicate.")
 	// TODO: Default to every 3min for source?
 	flags.StringVar(&o.Schedule, "source-cron-spec", "*/3 * * * *", "cronspec to be used to schedule capturing the state of the source volume. If not set the source volume will be captured every 3 minutes.")
-	// TODO: should this be exposed?
-	flags.StringVar(&o.SSHKeys, "source-ssh-keys", o.SSHKeys, "name of a secret in the source namespace to be used for authentication. If not set, SSH keys will be generated and a secret will be created with the appropriate keys.")
 	// Defaults to "root" after creation
 	flags.StringVar(&o.SSHUser, "source-ssh-user", o.SSHUser, "username for outgoing SSH connections (default 'root')")
 	// Defaults to ClusterIP after creation

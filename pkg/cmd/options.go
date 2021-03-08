@@ -16,6 +16,7 @@ import (
 
 type ReplicationOptions struct {
 	scribeOptions           scribeOptions
+	sshKeysSecretOptions    sshKeysSecretOptions
 	Mode                    string
 	CopyMethod              string //v1alpha1.CopyMethodType
 	Capacity                string //*resource.Quantity
@@ -25,7 +26,6 @@ type ReplicationOptions struct {
 	VolumeSnapshotClassName string
 	PVC                     string
 	Schedule                string
-	SSHKeys                 string
 	SSHUser                 string
 	Name                    string
 	Namespace               string
@@ -45,7 +45,7 @@ type commonOptions struct {
 	serviceType         corev1.ServiceType
 	externalSpec        *scribev1alpha1.ReplicationDestinationExternalSpec
 	address             *string
-	sshKeys             *string
+	sshKeysSecret       *string
 	sshUser             *string
 	path                *string
 	storageClassName    *string
@@ -85,6 +85,10 @@ func (o *ReplicationOptions) Validate() error {
 		return fmt.Errorf("must provide --copy-method; one of 'None|Clone|Snapshot'")
 	}
 	if o.Mode == "source" {
+		//TODO: FIX THIS
+		if len(o.sshKeysSecretOptions.SSHKeysSecret) == 0 {
+			return fmt.Errorf("must provide the name of the secret in ReplicationSource namespace that holds the SSHKeys for connecting to the ReplicationDestination namespace")
+		}
 		return nil
 	}
 	if len(o.Capacity) == 0 && len(o.PVC) == 0 {
@@ -148,8 +152,11 @@ func (o *ReplicationOptions) getCommonOptions() (*commonOptions, error) {
 	if len(o.Address) > 0 {
 		c.address = &o.Address
 	}
-	if len(o.SSHKeys) > 0 {
-		c.sshKeys = &o.SSHKeys
+	switch {
+	case len(o.sshKeysSecretOptions.SSHKeysSecret) > 0:
+		c.sshKeysSecret = &o.sshKeysSecretOptions.SSHKeysSecret
+	default:
+		c.sshKeysSecret = nil
 	}
 	if len(o.SSHUser) > 0 {
 		c.sshUser = &o.SSHUser
@@ -201,7 +208,7 @@ func (o *ReplicationOptions) CreateReplicationDestination() error {
 			VolumeSnapshotClassName: c.volumeSnapClassName,
 			DestinationPVC:          c.pvc,
 		},
-		SSHKeys:     c.sshKeys,
+		SSHKeys:     c.sshKeysSecret,
 		SSHUser:     c.sshUser,
 		Address:     c.address,
 		ServiceType: &c.serviceType,
@@ -257,7 +264,7 @@ func (o *ReplicationOptions) CreateReplicationSource() error {
 			AccessModes:             c.accessModes,
 			VolumeSnapshotClassName: c.volumeSnapClassName,
 		},
-		SSHKeys:     c.sshKeys,
+		SSHKeys:     c.sshKeysSecret,
 		ServiceType: &c.serviceType,
 		Address:     c.address,
 		Port:        c.port,

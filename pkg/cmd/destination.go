@@ -42,6 +42,7 @@ func NewCmdScribeNewDestination(streams genericclioptions.IOStreams) *cobra.Comm
 	}
 	flags := cmd.Flags()
 	o.scribeOptions.Bind(flags)
+	o.sshKeysSecretOptions.Bind(flags)
 	flags.StringVar(&o.Mode, "mode", "destination", "to distinguish destination options from source options")
 	flags.StringVar(&o.CopyMethod, "dest-copy-method", o.CopyMethod, "the method of creating a point-in-time image of the destination volume; one of 'None|Clone|Snapshot'")
 	flags.StringVar(&o.Address, "address", o.Address, "the remote address to connect to for replication.")
@@ -52,8 +53,6 @@ func NewCmdScribeNewDestination(streams genericclioptions.IOStreams) *cobra.Comm
 	flags.StringVar(&o.VolumeSnapshotClassName, "dest-volume-snapshot-class", o.VolumeSnapshotClassName, "name of the VolumeSnapshotClass to be used for the destination volume, only if the copyMethod is 'Snapshot'. If not set, the default VSC will be used.")
 	flags.StringVar(&o.PVC, "dest-pvc", o.PVC, "name of an existing PVC to use as the transfer destination volume instead of automatically provisioning one.")
 	flags.StringVar(&o.Schedule, "dest-cron-spec", o.Schedule, "cronspec to be used to schedule replication to occur at regular, time-based intervals. If not set replication will be continuous.")
-	// TODO: should this be exposed?
-	flags.StringVar(&o.SSHKeys, "dest-ssh-keys", o.SSHKeys, "name of a secret in the destination namespace to be used for authentication. If not set, SSH keys will be generated and a secret will be created with the appropriate keys.")
 	// Defaults to "root" after creation
 	flags.StringVar(&o.SSHUser, "dest-ssh-user", o.SSHUser, "username for outgoing SSH connections (default 'root')")
 	// Defaults to ClusterIP after creation
