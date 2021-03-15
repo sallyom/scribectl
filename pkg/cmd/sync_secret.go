@@ -7,6 +7,7 @@ import (
 	scribev1alpha1 "github.com/backube/scribe/api/v1alpha1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,6 +46,7 @@ type sshKeysSecretOptions struct {
 }
 
 func NewCmdScribeSyncSSHSecret(streams genericclioptions.IOStreams) *cobra.Command {
+	v := viper.New()
 	o := NewSSHKeysSecretOptions(streams)
 	cmd := &cobra.Command{
 		Use:     "sync-ssh-secret [OPTIONS]",
@@ -57,14 +59,37 @@ func NewCmdScribeSyncSSHSecret(streams genericclioptions.IOStreams) *cobra.Comma
 			kcmdutil.CheckErr(o.SyncSSHSecret())
 		},
 	}
-	flags := cmd.Flags()
-	o.Bind(flags)
-	o.scribeOptions.Bind(flags)
+	kcmdutil.CheckErr(o.scribeOptions.Bind(cmd, v))
+	kcmdutil.CheckErr(o.Bind(cmd, v))
 
 	return cmd
 }
-func (o *sshKeysSecretOptions) Bind(flags *pflag.FlagSet) {
+
+func (o *sshKeysSecretOptions) Bind(cmd *cobra.Command, v *viper.Viper) error {
+	// config file in current directory
+	// TODO: where to look for config file
+	v.SetConfigName(scribeConfig)
+	v.AddConfigPath(".")
+	v.SetConfigType("yaml")
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
+	}
+	o.bindFlags(cmd, v)
+	return nil
+}
+
+func (o *sshKeysSecretOptions) bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	flags := cmd.Flags()
 	flags.StringVar(&o.SSHKeysSecret, "ssh-keys-secret", o.SSHKeysSecret, "name of an existing valid SSHKeys secret to be used for authentication. If not set, the default SSHKey secret-name will be used from the ReplicationDestination location (default '<scribe-rsync->dest-src-<name-of-replication-destination>)'.")
+
+	flags.VisitAll(func(f *pflag.Flag) {
+		if !f.Changed && v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			flags.Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
 }
 
 func NewSSHKeysSecretOptions(streams genericclioptions.IOStreams) *sshKeysSecretOptions {
