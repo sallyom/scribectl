@@ -28,6 +28,7 @@ dest-copy-method: Snapshot
 dest-namespace: dest
 source-namespace: source
 source-pvc: mysql-pv-claim
+source-copy-method: Snapshot
 ```
 
 ### Create source application with:
@@ -63,7 +64,8 @@ $ echo ${address} //to be sure it's not empty, may take a minute to populate
 This assumes the default secret name that is created by the scribe controller. You can also pass `--ssh-keys-secret`
 that is a valid ssh-key-secret in the DestinationReplication namespace and cluster.
 
-Necessary flags are configured in `./scribe-config` shown above.
+Necessary flags are configured in `./scribe-config` shown above.  Save the output from the command below,
+as you will need the name of the ssh-keys-secret to pass to `scribe new-source`.
 ```bash
 scribe sync-ssh-secret 
 ```
@@ -72,7 +74,7 @@ scribe sync-ssh-secret
 
 Necessary flags are configured in `./scribe-config` shown above.
 ```bash
-$ scribe new-source --address ${address} --ssh-keys-secret scribe-rsync-dest-src-<name-of-replicationdestination>
+$ scribe new-source --address ${address} --ssh-keys-secret <name-of-ssh-secret-from-output-of-sync>
 I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
 ```
 TODO: add this to scribe CLI
