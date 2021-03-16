@@ -109,7 +109,13 @@ I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-so
 TODO: add this to scribe CLI
 ### Finally, create a database to sync in the destination namespace
 
-First, create the destination application from the scribe example:
+For the rest of the example, you'll be working from the `destuser context`. So we don't have to pass that to every
+kubectl command, run this:
+```bash
+$ kubectl config use-context destuser
+```
+
+Create the destination application from the scribe example:
 ```bash
 $ kubectl apply -n dest -f ../scribe/examples/destination-database/
 $ kubectl get pvc/mysql-pv-claim -n dest -o yaml > /tmp/pvc.yaml
