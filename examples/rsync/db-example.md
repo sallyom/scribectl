@@ -53,8 +53,9 @@ Necessary flags are configured in `./scribe-config` shown above.
 ```bash
 $ kubectl create ns dest
 $ scribe new-destination
-I0302 09:28:35.028745 4174293 options.go:248] ReplicationDestination dest-scribe-destination created in namespace dest
-$ address=$(kubectl get replicationdestination/dest-scribe-destination  -n dest --template={{.status.rsync.address}})
+I0302 09:28:35.028745 4174293 options.go:248] ReplicationDestination dest-destination created in namespace dest
+$ address=$(kubectl get replicationdestination/dest-destination  -n dest --template={{.status.rsync.address}})
+$ echo ${address} //to be sure it's not empty, may take a minute to populate
 ```
 
 ### Sync an SSH secret from the destination namespace to the source namespace
@@ -81,7 +82,7 @@ Find the latest image from the ReplicationDestination, then
 use this image to create the PVC
 
 ```bash
-$ kubectl get replicationdestination dest-scribe-destination -n dest --template={{.status.latestImage.name}}
+$ kubectl get replicationdestination dest-destination -n dest --template={{.status.latestImage.name}}
 $ sed -i 's/snapshotToReplace/scribe-dest-database-destination-20201203174504/g' ../scribe/examples/destination-database/mysql-pvc.yaml
 $ kubectl apply -n dest -f ../scribe/examples/destination-database/
 ```
