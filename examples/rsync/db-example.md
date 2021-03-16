@@ -94,7 +94,7 @@ To sync the data, you have to replace the PVC with every sync. This is because P
 That is the reason for extracting the yaml to a local file, then updating it with the snapshot image.
 For each sync, find the latest image from the ReplicationDestination, then use this image to create the PVC
 
-The following steps can be repeated to sync the data from source to destination:
+For first data sync run these commands:
 ```bash
 $ SNAPSHOT=$(kubectl get replicationdestination dest-destination -n dest --template={{.status.latestImage.name}})
 $ echo ${SNAPSHOT} // make sure this is not empty
