@@ -3,9 +3,9 @@
 This example will sync data from mysql database persistent volumes
 For this example, sync will happen between 2 clusters. Data will be synced
 from cluster-name `api-source-com:6443` to cluster-name `destination123`
-**Both clusters must have the [scribe operator installed](https://scribe-replication.readthedocs.io/en/latest/installation/index.html)**
 
-***https://github.com/backube/scribe checked out at ../scribe***
+*  **Both clusters must have the [scribe operator installed](https://scribe-replication.readthedocs.io/en/latest/installation/index.html)**
+*  ***https://github.com/backube/scribe checked out at ../scribe***
 
 ### Build Scribe
 
@@ -26,6 +26,9 @@ You can view config with the following commands:
 $ kubectl config view
 $ kubectl config get-clusters
 $ kubectl config get-contexts
+
+You can rename contexts with the following:
+$ kubectl config rename-context <oldname> <newname>
 ```
 
 ### Create source application:
@@ -45,19 +48,35 @@ $ mysql -u root -p$MYSQL_ROOT_PASSWORD
 $ exit
 ```
 
-### Create a replication destination:
+### Create a scribe-config with necessary flags:
 
-_If `kubectl config current-context` shows current context is `destuser` then you can omit the `--dest-kube-context|clustername` flags_
+Create a config file to designate your source and destination options. You can also pass these individually to each command, but they add up so the
+config file is usually a good option. You can add any, some, or all flags from `scribe <command> --help` to the config file.
+
+Create the config file at `./scribe-config`, as scribe will look for that file in the current directory.
+These are the flags that can always be filled in before creating either destination or source. You can change the values to suit your needs.
 
 ```bash
+$ cat scribe-config
+dest-kube-context: destuser
+dest-kube-clustername: destination123
+dest-service-type: LoadBalancer
+dest-access-mode: ReadWriteOnce
+dest-copy-method: Snapshot
+dest-namespace: dest
+source-kube-context: sourceuser
+source-kube-clustername: api-source-com:6443
+source-namespace: source
+source-service-type: LoadBalancer
+source-copy-method: Snapshot
+```
+
+### Create a replication destination:
+
+Necessary flags are configured in `./scribe-config` shown above.
+```bash
 $ kubectl --context destuser create ns dest
-$ scribe new-destination \
-     --dest-namespace dest \
-     --dest-service-type LoadBalancer \
-     --dest-access-mode ReadWriteOnce \
-     --dest-copy-method Snapshot \
-     --dest-kube-context destuser \
-     --dest-kube-clustername destination123
+$ scribe new-destination
 I0302 09:28:35.028745 4174293 options.go:248] ReplicationDestination dest-scribe-destination created in namespace dest
 ```
 Save the rsync address from the destination to pass to the new-source:
@@ -71,30 +90,20 @@ $ echo ${address} //to be sure it's not empty, may take a minute to populate
 This assumes the default secret name that is created by the scribe controller. You can also pass `--ssh-keys-secret`
 that is a valid ssh-key-secret in the DestinationReplication namespace and cluster.
 
-_You may omit the clustername, context flags for whichever context is the current context_
+Necessary flags are configured in `./scribe-config` shown above.
+Save the output from the command below, as you will need the name of the ssh-keys-secret to pass to `scribe new-source`
 
 ```bash
-scribe sync-ssh-secret \
-     --dest-namespace dest \
-     --dest-kube-clustername destination123 --dest-kube-context destuser \
-     --source-namespace source \
-     --source-kube-clustername api-source-com:6443 --source-kube-context sourceuser
+scribe sync-ssh-secret
 ```
 
 ### Create replication source:
 
-_If `kubectl config current-context` shows current context is `sourceuser` then can omit the `source-kube-context|clustername` flags_
+Necessary flags are configured in `./scribe-config` shown above.
+The ssh-keys-secret name listed below is the default secret name that is created from `scribe sync-ssh-secret`.
 
 ```bash
-$ scribe new-source \
-     --address ${address} \
-     --ssh-keys-secret scribe-rsync-dest-src-<name-of-replicationdestination> \ 
-     --source-namespace source \
-     --source-service-type LoadBalancer \
-     --source-copy-method Snapshot \
-     --source-pvc mysql-pv-claim \
-     --source-kube-context sourceuser \
-     --source-kube-clustername api-source-com:6443
+$ scribe new-source --address ${address} --ssh-keys-secret scribe-rsync-dest-src-<name-of-replicationdestination> 
 I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
 ```
 TODO: add this to scribe CLI

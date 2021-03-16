@@ -7,6 +7,7 @@ import (
 	scribev1alpha1 "github.com/backube/scribe/api/v1alpha1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -26,6 +27,8 @@ Scribe is a command line tool for a scribe operator running in a Kubernetes clus
     For more on Scribe, see the documentation at https://scribe-replication.readthedocs.io/
 
     To see the full list of commands supported, run 'scribe --help'.`)
+
+	scribeConfig = "scribe-config"
 )
 
 type scribeOptions struct {
@@ -41,13 +44,36 @@ type scribeOptions struct {
 	genericclioptions.IOStreams
 }
 
-func (o *scribeOptions) Bind(flags *pflag.FlagSet) {
+func (o *scribeOptions) bindFlags(cmd *cobra.Command, v *viper.Viper) {
+	flags := cmd.Flags()
 	flags.StringVar(&o.destKubeContext, "dest-kube-context", o.destKubeContext, "the name of the kubeconfig context to use for the destination cluster. Defaults to current-context.")
 	flags.StringVar(&o.sourceKubeContext, "source-kube-context", o.sourceKubeContext, "the name of the kubeconfig context to use for the destination cluster. Defaults to current-context.")
 	flags.StringVar(&o.destKubeClusterName, "dest-kube-clustername", o.destKubeClusterName, "the name of the kubeconfig cluster to use for the destination cluster. Defaults to current-cluster.")
 	flags.StringVar(&o.sourceKubeClusterName, "source-kube-clustername", o.sourceKubeClusterName, "the name of the kubeconfig cluster to use for the destination cluster. Defaults to current cluster.")
 	flags.StringVar(&o.destNamespace, "dest-namespace", o.destNamespace, "the transfer destination namespace and/or location of a ReplicationDestination. This namespace must exist. If not set, use the current namespace.")
 	flags.StringVar(&o.sourceNamespace, "source-namespace", o.sourceNamespace, "the transfer source namespace and/or location of a ReplicationSource. This namespace must exist. If not set, use the current namespace.")
+	flags.VisitAll(func(f *pflag.Flag) {
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if v.IsSet(f.Name) {
+			val := v.Get(f.Name)
+			flags.Set(f.Name, fmt.Sprintf("%v", val))
+		}
+	})
+}
+
+func (o *scribeOptions) Bind(cmd *cobra.Command, v *viper.Viper) error {
+	// config file in current directory
+	// TODO: where to look for config file
+	v.SetConfigName(scribeConfig)
+	v.AddConfigPath(".")
+	v.SetConfigType("yaml")
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return err
+		}
+	}
+	o.bindFlags(cmd, v)
+	return nil
 }
 
 // NewCmdScribe implements the scribe command
