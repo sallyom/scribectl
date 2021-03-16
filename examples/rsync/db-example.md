@@ -78,15 +78,28 @@ $ scribe new-source --address ${address} --ssh-keys-secret <name-of-ssh-secret-f
 I0302 09:45:19.026520 4181483 options.go:305] ReplicationSource source-scribe-source created in namespace source
 ```
 TODO: add this to scribe CLI
-### Finally, create a database to sync in the destination ns
+### Finally, create a database to sync in the destination namespace
 
-Find the latest image from the ReplicationDestination, then
-use this image to create the PVC
-
+First, create the destination application from the scribe example:
 ```bash
-$ kubectl get replicationdestination dest-destination -n dest --template={{.status.latestImage.name}}
-$ sed -i 's/snapshotToReplace/scribe-dest-database-destination-20201203174504/g' ../scribe/examples/destination-database/mysql-pvc.yaml
 $ kubectl apply -n dest -f ../scribe/examples/destination-database/
+$ kubectl get pvc/mysql-pv-claim -n dest -o yaml > /tmp/pvc.yaml
+```
+
+To sync the data, you have to replace the PVC (and PV). This is because PersistenVolumeClaims are immutable.
+That is the reason for creating the PVC, extracting the yaml to a local file, then updating the snapshot image.
+For each sync, find the latest image from the ReplicationDestination, then use this image to create the PVC
+
+The following steps can be repeated to sync the data from source to destination:
+```bash
+$ kubectl delete pvc/mysql-pv-claim -n dest --force --grace-period=0
+$ SNAPSHOT=$(kubectl get replicationdestination dest-destination -n dest --template={{.status.latestImage.name}})
+$ echo ${SNAPSHOT} // make sure this is not empty
+$ sed -i "s/snapshotToReplace/${SNAPSHOT}/g" /tmp/pvc.yaml
+$ kubectl apply -f /tmp/pvc.yaml
+
+For the next sync, reset the pvc.yaml
+$ sed -i "s/${SNAPSHOT}/snapshotToReplace/g" /tmp/pvc.yaml
 ```
 
 Verify the synced database:
