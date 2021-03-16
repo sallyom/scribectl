@@ -82,24 +82,24 @@ TODO: add this to scribe CLI
 
 First, create the destination application from the scribe example:
 ```bash
-$ kubectl apply -n dest -f ../scribe/examples/destination-database/
-$ kubectl get pvc/mysql-pv-claim -n dest -o yaml > /tmp/pvc.yaml
+$ cp ../scribe/examples/destination-database/mysql-pvc.yaml /tmp/pvc.yaml // will use that later
+# - edit the /tmp/pvc.yaml with metadata.namespace `dest` directly under the `name:`, otherwise you 
+#   may forget to add the `-n dest` when you apply the yaml (like I did).
+$ kubectl apply -n dest -f ../scribe/examples/destination-database/mysql-deployment.yaml
+$ kubectl apply -n dest -f ../scribe/examples/destination-database/mysql-service.yaml
+$ kubectl apply -n dest -f ../scribe/examples/destination-database/mysql-secret.yaml
 ```
 
-To sync the data, you have to replace the PVC (and PV). This is because PersistenVolumeClaims are immutable.
-That is the reason for creating the PVC, extracting the yaml to a local file, then updating the snapshot image.
+To sync the data, you have to replace the PVC with every sync. This is because PersistenVolumeClaims are immutable.
+That is the reason for extracting the yaml to a local file, then updating it with the snapshot image.
 For each sync, find the latest image from the ReplicationDestination, then use this image to create the PVC
 
 The following steps can be repeated to sync the data from source to destination:
 ```bash
-$ kubectl delete pvc/mysql-pv-claim -n dest --force --grace-period=0
 $ SNAPSHOT=$(kubectl get replicationdestination dest-destination -n dest --template={{.status.latestImage.name}})
 $ echo ${SNAPSHOT} // make sure this is not empty
 $ sed -i "s/snapshotToReplace/${SNAPSHOT}/g" /tmp/pvc.yaml
 $ kubectl apply -f /tmp/pvc.yaml
-
-For the next sync, reset the pvc.yaml
-$ sed -i "s/${SNAPSHOT}/snapshotToReplace/g" /tmp/pvc.yaml
 ```
 
 Verify the synced database:
@@ -110,3 +110,45 @@ $ kubectl exec --stdin --tty -n dest `kubectl get pods -n dest | grep mysql | aw
 > exit
 $ exit
 ```
+
+### Pattern to follow for all future syncs - It's not pretty but it works:
+
+To sync the data, you have to replace the PVC with every sync. This is because PersistenVolumeClaims are immutable.
+
+You will also need to update the PV for the PVC with each sync. To do that,
+find the PV that is bound to the mysql-pv-claim PVC, then remove its claimRef:
+```bash
+$ PVNAME=$(kubectl get pv | grep mysql-pv-claim | awk '{print $1}')
+$ kubectl delete pvc/mysql-pv-claim -n dest // This is tricky, this will hang, when it does, 
+  ctrl-c to escape the cmd, then:
+$ kubectl edit pvc/mysql-pv-claim -n dest // Remove the finalizer section. Once removed save and exit,
+  since the pvc has a deletionTimestamp it will disappear when you remove the finalizer.
+$ kubectl patch pv "${PVNAME}" -p '{"spec":{"claimRef": null}}'
+
+Now the PV is ready to bind to a new pvc/mysql-pv-claim with a new snapshot.
+```
+
+Reset the /tmp/pvc.yaml:
+```bash
+$ sed -i "s/${SNAPSHOT}/snapshotToReplace/g" /tmp/pvc.yaml
+```
+
+(One-time-only step): Edit the /tmp/pvc.yaml to add the PV Name. Add the spec.volumeName like so:
+```
+spec:
+  volumeName: ${PVNAME}
+  accessModes:
+    - ReadWriteOnce
+----
+```
+
+Now, you can follow the same steps as above to get the new snapshot, update the pvc.yaml with it, and apply the new destination pvc:
+
+```bash
+$ SNAPSHOT=$(kubectl get replicationdestination dest-destination -n dest --template={{.status.latestImage.name}})
+$ echo ${SNAPSHOT} // make sure this is not empty
+$ sed -i "s/snapshotToReplace/${SNAPSHOT}/g" /tmp/pvc.yaml
+$ kubectl apply -f /tmp/pvc.yaml
+```
+
+Verify the synced database.
